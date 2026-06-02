@@ -28,6 +28,7 @@ import { appConfig, authConfig } from './config/config.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      ignoreEnvFile: true,
       load: [appConfig, authConfig],
     }),
     EventEmitterModule.forRoot(),
