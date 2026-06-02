@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "nest start --watch",
     "start": "node dist/src/main.js",
-    "build": "nest build",
+    "build": "npx @nestjs/cli build",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "test": "jest",
     "test:recovery": "jest --config ./test/jest-unit.json test/recovery",
