@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20", "openssh"]
 
 [phases.install]
-cmds = ["cd backend && npm ci"]
+cmds = ["cd backend && npm ci --include=dev"]
 
 [phases.build]
 cmds = [
