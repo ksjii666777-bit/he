@@ -18,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     @Inject(authConfig.KEY) auth: ConfigType<typeof authConfig>,
     private prisma: PrismaService,
   ) {
+    console.log(`DIAG: auth.jwtSecret present: ${!!auth?.jwtSecret}`);
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
