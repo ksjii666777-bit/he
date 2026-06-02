@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "date": "2026-05-31",
+  "targets": {
+    "auth": {
+      "register": { "p95_ms": 500, "p99_ms": 1000, "error_rate": 0.01 },
+      "login": { "p95_ms": 500, "p99_ms": 1000, "error_rate": 0.01 },
+      "refresh": { "p95_ms": 300, "p99_ms": 500, "error_rate": 0.01 }
+    },
+    "learning": {
+      "lesson_generation": { "p95_ms": 8000, "p99_ms": 15000, "error_rate": 0.05 },
+      "placement_generate": { "p95_ms": 2000, "p99_ms": 5000, "error_rate": 0.02 },
+      "placement_evaluate": { "p95_ms": 2000, "p99_ms": 5000, "error_rate": 0.02 }
+    },
+    "speech": {
+      "pronunciation": { "p95_ms": 2000, "p99_ms": 5000, "error_rate": 0.02 },
+      "synthesize": { "p95_ms": 3000, "p99_ms": 8000, "error_rate": 0.03 },
+      "transcribe": { "p95_ms": 3000, "p99_ms": 8000, "error_rate": 0.03 }
+    },
+    "progress": {
+      "dashboard": { "p95_ms": 500, "p99_ms": 1000, "error_rate": 0.01 },
+      "streak": { "p95_ms": 300, "p99_ms": 500, "error_rate": 0.01 }
+    },
+    "vocabulary": {
+      "review": { "p95_ms": 300, "p99_ms": 500, "error_rate": 0.01 },
+      "stats": { "p95_ms": 300, "p99_ms": 500, "error_rate": 0.01 }
+    }
+  },
+  "load_test_targets": {
+    "auth_flow": { "concurrent_users": 100, "error_rate_threshold": 0.05 },
+    "lesson_generation": { "concurrent_users": 20, "error_rate_threshold": 0.10 },
+    "mixed_workload": { "concurrent_users": 25, "error_rate_threshold": 0.10 }
+  },
+  "cost_targets": {
+    "monthly_budget_usd": 799,
+    "monthly_hard_cap_usd": 1200,
+    "daily_user_limit_cents": 10,
+    "cost_per_lesson_cents": 2.0,
+    "cost_per_conversation_turn_cents": 0.1,
+    "cost_per_pronunciation_cents": 0.15,
+    "cost_per_tts_call_cents": 1.0
+  }
+}

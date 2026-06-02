@@ -1,0 +1,117 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-05-31",
+  "bugs": [
+    {
+      "id": "BUG-001",
+      "severity": "high",
+      "module": "speech",
+      "title": "Speech transcribe endpoint missing multipart file interceptor",
+      "description": "POST /speech/transcribe uses @UploadedFile but the controller method is missing @UseInterceptors(FileInterceptor('file')). Without it, multer never parses the file, so `file` is always undefined.",
+      "fix": "Add @UseInterceptors(FileInterceptor('file')) decorator to transcribe method",
+      "status": "fixed",
+      "fixed_in": "Phase 2"
+    },
+    {
+      "id": "BUG-002",
+      "severity": "medium",
+      "module": "progress",
+      "title": "Progress streak calculation may miss consecutive days with weekend gaps",
+      "description": "computeStreak() checks date === checkDate exactly. If a user studies Mon-Wed then skips Thu but studies Fri, the streak should break at Thu. Current logic uses daily_activity entries which only exist on active days — the check needs to handle missing days correctly.",
+      "fix": "Generate a date range and check each consecutive day exists",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-003",
+      "severity": "high",
+      "module": "ai-gateway",
+      "title": "ModelRouter uses fixed 500 tokens for cost estimation",
+      "description": "All AI calls use estimateInputTokens=500 and estimateOutputTokens=500 regardless of actual prompt length. This significantly underestimates lesson generation costs (prompts are ~800 tokens) and overestimates conversation costs.",
+      "fix": "Count actual tokens in prompt/response or use model's tokenizer",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-004",
+      "severity": "medium",
+      "module": "conversation",
+      "title": "Conversation history not persisted across server restarts",
+      "description": "Conversation sessions are stored in-memory Map in ConversationSessionService. Server restart loses all active conversations, causing WebSocket reconnection to fail on session:restored.",
+      "fix": "Persist active sessions to Redis with TTL",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-005",
+      "severity": "medium",
+      "module": "speech",
+      "title": "Pronunciation alignment assumes same number of reference and spoken words",
+      "description": "alignAndScore() uses index-based matching: refWords[i] ↔ spokenWords[i]. If the student speaks more or fewer words than the reference, alignment is wrong after the first mismatch.",
+      "fix": "Implement Levenshtein-based word alignment",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-006",
+      "severity": "low",
+      "module": "learning",
+      "title": "Placement test generates same questions every time for same parameters",
+      "description": "getOrGenerateQuestions() uses a deterministic hash for question IDs and static question text. Every A1 grammar test gets the exact same question pool.",
+      "fix": "Add random seed variation or shuffle options",
+      "status": "open"
+    },
+    {
+      "id": "BUG-007",
+      "severity": "low",
+      "module": "vocabulary",
+      "title": "SM-5 result interval uses previousInterval=0 on first review",
+      "description": "When quality < 3 and reps=0, interval is set to 1 regardless. But calculate() uses previousInterval to compute interval for reps >= 3. On first review with zero previousInterval, interval becomes 0 for good reviews after the third repetition.",
+      "fix": "Use interval=1 as default when previousInterval is 0",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-008",
+      "severity": "high",
+      "module": "security",
+      "title": "No global rate limiter on any endpoint",
+      "description": "Auth endpoints especially POST /v1/auth/login are susceptible to brute-force attacks. No @nestjs/throttler protection anywhere.",
+      "fix": "Add @nestjs/throttler with global guard and per-endpoint overrides",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-009",
+      "severity": "medium",
+      "module": "ai-gateway",
+      "title": "ContentValidator safety filter matches substrings in harmless text",
+      "description": "Pattern /kill/ matches 'killing time' or 'skill', producing false positives. Word-boundary matching needed.",
+      "fix": "Add \\b word boundaries to blocked patterns",
+      "status": "fixed",
+      "fixed_in": "Phase 4"
+    },
+    {
+      "id": "BUG-010",
+      "severity": "low",
+      "module": "learning",
+      "title": "Lesson cache key ignores user language preferences",
+      "description": "Cache key is `lesson:daily:${userId}:${date}`. If user changes nativeLanguage, the cached lesson still uses old language.",
+      "fix": "Include native language in cache key",
+      "status": "open"
+    }
+  ],
+  "known_limitations": [
+    "Conversation sessions use Redis — lost on Redis restart (non-persistent Redis)",
+    "Deepgram STT returns mock for all audio (no real API called in dev)",
+    "ElevenLabs TTS returns mock audio (no real API called in dev)",
+    "No email verification on registration",
+    "No password reset flow",
+    "Phase 2 endpoints lack v1/ prefix",
+    "Swagger docs missing Phase 2 endpoints"
+  ],
+  "launch_blockers": [
+    "Need real API keys in .env (Anthropic, OpenAI, Deepgram, ElevenLabs)",
+    "E2E tests require PostgreSQL + Redis running locally"
+  ]
+}

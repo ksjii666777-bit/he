@@ -1,0 +1,16 @@
+{
+  "name": "he",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "setup": "cd backend && npm install && npx prisma generate && cd .. && docker compose up -d postgres redis && cd backend && npx prisma migrate dev --name init && npx ts-node prisma/seed.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.2.0"
+  }
+}

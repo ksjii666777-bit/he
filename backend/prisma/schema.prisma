@@ -1,0 +1,479 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  email
+  google
+}
+
+enum UserTier {
+  free
+  premium
+}
+
+enum ConsentType {
+  voice_recording
+  data_processing
+  marketing
+}
+
+model User {
+  id              String       @id @default(uuid()) @db.Uuid
+  email           String       @unique
+  passwordHash    String?      @map("password_hash")
+  authProvider    AuthProvider @default(email) @map("auth_provider")
+  authProviderId  String?      @map("auth_provider_id")
+  tier            UserTier     @default(free)
+  isActive        Boolean      @default(true) @map("is_active")
+  consentGranted  Boolean      @default(false) @map("consent_granted")
+  consentGrantedAt DateTime?   @map("consent_granted_at")
+  refreshToken    String?      @map("refresh_token")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  profile              UserProfile?
+  languages            UserLanguage[]
+  assessments          Assessment[]
+  roadmap              Roadmap?
+  lessonsProgress      LessonsProgress[]
+  userVocabulary       UserVocabulary[]
+  speechSessions       SpeechSession[]
+  conversationSessions ConversationSession[]
+  errorCorrections     ErrorCorrection[]
+  dailyActivity        DailyActivity[]
+  consentLogs          ConsentLog[]
+  aiOutputs            AiOutput[]
+  flaggedReviews       AiOutputFlag[]  @relation("FlagReviewer")
+
+  @@index([email])
+  @@map("users")
+}
+
+model UserProfile {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @map("user_id") @db.Uuid
+  name              String
+  age               Int?
+  countryCode       String   @map("country_code")
+  nativeLanguage    String   @map("native_language")
+  learningGoal      String   @map("learning_goal")
+  dailyStudyMin     Int      @default(15) @map("daily_study_min")
+  learningStyle     String   @default("mixed") @map("learning_style")
+  teacherMode       String   @default("friendly") @map("teacher_mode")
+  onboardingComplete Boolean @default(false) @map("onboarding_complete")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserLanguage {
+  id           String @id @default(uuid()) @db.Uuid
+  userId       String @map("user_id") @db.Uuid
+  languageCode String @map("language_code")
+  goalCefr     String @map("goal_cefr")
+  isPrimary    Boolean @default(true) @map("is_primary")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, languageCode])
+  @@map("user_languages")
+}
+
+model ConsentLog {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  consentType ConsentType  @map("consent_type")
+  granted     Boolean
+  ipAddress   String?      @map("ip_address")
+  userAgent   String?      @map("user_agent")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, consentType])
+  @@map("consent_logs")
+}
+
+model Assessment {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  languageCode String    @map("language_code")
+  type         String
+  status       String    @default("in_progress")
+  overallScore Decimal?  @map("overall_score") @db.Decimal(5, 2)
+  overallCefr  String?   @map("overall_cefr")
+  content      Json?
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  durationSec  Int?      @map("duration_sec")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  responses AssessmentResponse[]
+
+  @@index([userId, createdAt])
+  @@map("assessments")
+}
+
+model AssessmentResponse {
+  id             String   @id @default(uuid()) @db.Uuid
+  assessmentId   String   @map("assessment_id") @db.Uuid
+  sectionType    String   @map("section_type")
+  questionType   String   @map("question_type")
+  content        Json
+  userResponse   Json?    @map("user_response")
+  isCorrect      Boolean? @map("is_correct")
+  score          Decimal? @db.Decimal(5, 2)
+  aiFeedback     String?  @map("ai_feedback")
+  audioUrl       String?  @map("audio_url")
+  responseTimeMs Int?     @map("response_time_ms")
+  difficulty     Int      @default(1)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@map("assessment_responses")
+}
+
+model Roadmap {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @unique @map("user_id") @db.Uuid
+  languageCode   String   @map("language_code")
+  durationMonths Int      @map("duration_months")
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  currentCefr    String   @map("current_cefr")
+  targetCefr     String   @map("target_cefr")
+  isActive       Boolean  @default(true) @map("is_active")
+  generatedAt    DateTime @default(now()) @map("generated_at")
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones RoadmapMilestone[]
+
+  @@index([userId, languageCode])
+  @@map("roadmaps")
+}
+
+model RoadmapMilestone {
+  id          String    @id @default(uuid()) @db.Uuid
+  roadmapId   String    @map("roadmap_id") @db.Uuid
+  monthNumber Int       @map("month_number")
+  title       String
+  description String?
+  isCompleted  Boolean   @default(false) @map("is_completed")
+  completedAt DateTime? @map("completed_at")
+  sortOrder   Int       @map("sort_order")
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId])
+  @@map("roadmap_milestones")
+}
+
+model LessonsProgress {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  lessonDate         DateTime  @map("lesson_date") @db.Date
+  title              String
+  cefrLevel          String    @map("cefr_level")
+  status             String    @default("in_progress")
+  score              Decimal?  @db.Decimal(5, 2)
+  timeSpentSec       Int       @default(0) @map("time_spent_sec")
+  exercisesTotal     Int       @default(0) @map("exercises_total")
+  exercisesCompleted Int       @default(0) @map("exercises_completed")
+  content            Json?
+  weakAreas          String[]  @map("weak_areas")
+  vocabularyLearned  String[]  @map("vocabulary_learned")
+  startedAt          DateTime? @map("started_at")
+  completedAt        DateTime? @map("completed_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonDate])
+  @@index([userId, lessonDate])
+  @@map("lessons_progress")
+}
+
+model GrammarLesson {
+  id            String   @id @default(uuid()) @db.Uuid
+  languageCode  String   @map("language_code")
+  cefrLevel     String   @map("cefr_level")
+  title         String
+  grammarPoint  String   @map("grammar_point")
+  explanation   String
+  shortExplanation String @map("short_explanation")
+  difficulty    Int      @default(1)
+  examples      Json?
+  rules         String[]
+  exceptions    String[]
+  commonMistakes Json?   @map("common_mistakes")
+  relatedLessons String[] @map("related_lessons")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([languageCode, grammarPoint])
+  @@index([languageCode, cefrLevel])
+  @@map("grammar_lessons")
+}
+
+model ConversationScenario {
+  id          String   @id @default(uuid()) @db.Uuid
+  languageCode String  @map("language_code")
+  cefrLevel   String   @map("cefr_level")
+  scenario    String
+  title       String
+  description String?
+  context     String?
+  difficulty  Int      @default(1)
+  roles       Json?
+  vocabulary  String[]
+  phrases     String[]
+  tips        String[]
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([languageCode, scenario])
+  @@index([languageCode, cefrLevel])
+  @@map("conversation_scenarios")
+}
+
+model VocabularyBank {
+  id              String   @id @default(uuid()) @db.Uuid
+  languageCode    String   @map("language_code")
+  word            String
+  transliteration String?
+  phonetic        String?
+  partOfSpeech    String?  @map("part_of_speech")
+  cefrLevel       String?  @map("cefr_level")
+  frequencyRank   Int?     @map("frequency_rank")
+  definitions     Json?
+  examples        Json?
+  synonyms        String[]
+  commonMistakes  Json?    @map("common_mistakes")
+  audioUrl        String?  @map("audio_url")
+  topicTags       String[] @map("topic_tags")
+
+  userVocabulary UserVocabulary[]
+
+  @@unique([languageCode, word])
+  @@index([languageCode, cefrLevel])
+  @@map("vocabulary_bank")
+}
+
+model UserVocabulary {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  vocabularyId  String   @map("vocabulary_id") @db.Uuid
+  status        String   @default("new")
+  familiarity   Int      @default(0)
+  timesSeen     Int      @default(0)
+  timesCorrect  Int      @default(0) @map("times_correct")
+  timesWrong    Int      @default(0) @map("times_wrong")
+  nextReviewAt  DateTime @default(now()) @map("next_review_at")
+  intervalSec   BigInt   @default(0) @map("interval_sec")
+  easeFactor    Decimal  @default(2.50) @map("ease_factor") @db.Decimal(4, 2)
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary VocabularyBank @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyId])
+  @@index([userId, nextReviewAt])
+  @@map("user_vocabulary")
+}
+
+model SpeechSession {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  sessionType       String   @map("session_type")
+  referenceId       String?  @map("reference_id") @db.Uuid
+  languageCode      String   @map("language_code")
+  durationMs        Int?     @map("duration_ms")
+  audioUrl          String   @map("audio_url")
+  transcriptionText String?  @map("transcription_text")
+  transcriptionConf Decimal? @map("transcription_conf") @db.Decimal(4, 3)
+  noiseLevelDb      Decimal? @map("noise_level_db") @db.Decimal(5, 2)
+  status            String   @default("processing")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pronunciationAnalysis PronunciationAnalysis?
+
+  @@index([userId, createdAt])
+  @@map("speech_sessions")
+}
+
+model PronunciationAnalysis {
+  id              String   @id @default(uuid()) @db.Uuid
+  speechSessionId String   @unique @map("speech_session_id") @db.Uuid
+  overallScore    Decimal  @map("overall_score") @db.Decimal(5, 2)
+  fluencyScore    Decimal? @map("fluency_score") @db.Decimal(5, 2)
+  grammarScore    Decimal? @map("grammar_score") @db.Decimal(5, 2)
+  confidenceScore Decimal? @map("confidence_score") @db.Decimal(5, 2)
+  phonemeScores   Json?    @map("phoneme_scores")
+  prosodyMetrics  Json?    @map("prosody_metrics")
+  errorsDetected  Json?    @map("errors_detected")
+  l1Influences    String[] @map("l1_influences")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session SpeechSession @relation(fields: [speechSessionId], references: [id], onDelete: Cascade)
+
+  @@map("pronunciation_analysis")
+}
+
+model ConversationSession {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  languageCode String   @map("language_code")
+  level        Int
+  scenario     String
+  durationMs   BigInt?  @map("duration_ms")
+  messageCount Int      @default(0) @map("message_count")
+  avgScore     Decimal? @map("avg_score") @db.Decimal(5, 2)
+  status       String   @default("in_progress")
+  summary      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@map("conversation_sessions")
+}
+
+model ConversationMessage {
+  id            String   @id @default(uuid()) @db.Uuid
+  sessionId     String   @map("session_id") @db.Uuid
+  sender        String
+  messageOrder  Int      @map("message_order")
+  text          String
+  audioUrl      String?  @map("audio_url")
+  transcription String?
+  corrections   Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  session ConversationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, messageOrder])
+  @@map("conversation_messages")
+}
+
+model ErrorCorrection {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  languageCode   String   @map("language_code")
+  source         String
+  sourceId       String?  @map("source_id") @db.Uuid
+  category       String
+  subcategory    String?
+  incorrectText  String   @map("incorrect_text")
+  correctText    String   @map("correct_text")
+  explanation    String?
+  alternatives   String[]
+  severity       String   @default("minor")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, languageCode, createdAt])
+  @@map("error_corrections")
+}
+
+model DailyActivity {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  date              DateTime @db.Date
+  totalMinutes      Int      @default(0) @map("total_minutes")
+  lessonsCompleted  Int      @default(0) @map("lessons_completed")
+  exercisesDone     Int      @default(0) @map("exercises_done")
+  vocabReviewed     Int      @default(0) @map("vocab_reviewed")
+  conversationsHad  Int      @default(0) @map("conversations_had")
+  avgScore          Decimal? @map("avg_score") @db.Decimal(5, 2)
+  streakDay         Int      @default(0) @map("streak_day")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_activity")
+}
+
+model AiOutput {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  promptType       String   @map("prompt_type")
+  promptVersion    String   @map("prompt_version")
+  provider         String
+  model            String
+  inputTokens      Int?     @map("input_tokens")
+  outputTokens     Int?     @map("output_tokens")
+  costCents        Decimal? @map("cost_cents") @db.Decimal(8, 4)
+  latencyMs        Int?     @map("latency_ms")
+  validated        Boolean  @default(false)
+  validationStatus String?  @map("validation_status")
+  passedSafety     Boolean  @default(false) @map("passed_safety")
+  wasFallback      Boolean  @default(false) @map("was_fallback")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flags AiOutputFlag[]
+
+  @@index([userId, createdAt])
+  @@map("ai_outputs")
+}
+
+model Feedback {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  category  String
+  message   String
+  rating    Int?
+  page      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("feedback")
+}
+
+model InviteCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  code      String    @unique
+  maxUses   Int       @default(1) @map("max_uses")
+  usedCount Int       @default(0) @map("used_count")
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+
+  @@map("invite_codes")
+}
+
+model AiOutputFlag {
+  id          String    @id @default(uuid()) @db.Uuid
+  aiOutputId  String    @map("ai_output_id") @db.Uuid
+  flagType    String    @map("flag_type")
+  severity    String
+  description String?
+  reviewedBy  String?   @map("reviewed_by") @db.Uuid
+  reviewedAt  DateTime? @map("reviewed_at")
+  resolution  String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  output   AiOutput @relation(fields: [aiOutputId], references: [id], onDelete: Cascade)
+  reviewer User?    @relation("FlagReviewer", fields: [reviewedBy], references: [id])
+
+  @@index([reviewedAt])
+  @@map("ai_output_flags")
+}

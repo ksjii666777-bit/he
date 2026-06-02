@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.log
+.turbo/
+coverage/
+.cache/
+.temp/
+*.tsbuildinfo
+build/
+.dart_tool/
+.packages
+.pub/
